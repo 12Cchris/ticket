@@ -388,6 +388,10 @@ input:focus, textarea:focus, select:focus {
         <h3 class="section-title">발권 정보</h3>
         <p class="section-help">티켓 상단에 표시되는 발권 일시와 매수 라벨입니다.</p>
         <div class="field">
+          <label for="f-heading">티켓 제목</label>
+          <input type="text" id="f-heading" value="영화입장권">
+        </div>
+        <div class="field">
           <label for="f-issued">발권 일시</label>
           <input type="datetime-local" id="f-issued">
         </div>
@@ -516,7 +520,7 @@ input:focus, textarea:focus, select:focus {
             <div class="ticket-content">
 
               <div class="ticket-header">
-                <div class="ticket-heading">영화입장권</div>
+                <div class="ticket-heading editable" id="out-heading" contenteditable="true">영화입장권</div>
               </div>
 
               <div class="ticket-row issue-row">
@@ -549,7 +553,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">발권소 편집기 v3.0 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">발권소 편집기 v3.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -570,6 +574,7 @@ input:focus, textarea:focus, select:focus {
 
   // "기본값으로 초기화" 시 되돌아갈 원본 샘플 값 (최초 배포 시 기준값)
   var FACTORY_DEFAULTS = {
+    heading: "영화입장권",
     issueLabel: "[전체 발권]",
     format: "2D",
     rating: "12세 이상 관람가",
@@ -589,6 +594,7 @@ input:focus, textarea:focus, select:focus {
 
   /* ---------- DOM 참조 ---------- */
   var els = {
+    heading: document.getElementById("f-heading"),
     issued: document.getElementById("f-issued"),
     issueLabel: document.getElementById("f-issueLabel"),
     rating: document.getElementById("f-rating"),
@@ -615,6 +621,7 @@ input:focus, textarea:focus, select:focus {
   };
 
   var out = {
+    heading: document.getElementById("out-heading"),
     issued: document.getElementById("out-issued"),
     issueLabel: document.getElementById("out-issueLabel"),
     rating: document.getElementById("out-rating"),
@@ -680,6 +687,7 @@ input:focus, textarea:focus, select:focus {
 
   function collectState(){
     return {
+      heading: els.heading.value,
       issued: els.issued.value,
       issueLabel: els.issueLabel.value,
       format: format,
@@ -713,6 +721,7 @@ input:focus, textarea:focus, select:focus {
 
   // 저장된 값 또는 기본값을 폼/상태에 그대로 채워 넣는다 (렌더링은 호출부에서 별도로 수행).
   function applyState(state){
+    els.heading.value = state.heading || FACTORY_DEFAULTS.heading;
     els.issued.value = state.issued;
     els.issueLabel.value = state.issueLabel;
     setFormat(state.format);
@@ -737,6 +746,7 @@ input:focus, textarea:focus, select:focus {
     var today = nowDateValue();
     var now = nowTimeValue();
     applyState({
+      heading: FACTORY_DEFAULTS.heading,
       issued: today + "T" + now,
       issueLabel: FACTORY_DEFAULTS.issueLabel,
       format: FACTORY_DEFAULTS.format,
@@ -786,6 +796,7 @@ input:focus, textarea:focus, select:focus {
   makeInlineEditable(out.seats, function(){ overrides.seats = out.seats.textContent; saveState(); });
 
   // 1:1로 대응되는 값(제목/원제/발권 라벨/인원)은 override 없이 폼 입력값 자체를 갱신한다.
+  makeInlineEditable(out.heading, function(){ els.heading.value = out.heading.textContent; saveState(); });
   makeInlineEditable(out.title, function(){ els.title.value = out.title.textContent; saveState(); });
   makeInlineEditable(out.original, function(){ els.original.value = out.original.textContent; saveState(); });
   makeInlineEditable(out.issueLabel, function(){ els.issueLabel.value = out.issueLabel.textContent; saveState(); });
@@ -929,6 +940,8 @@ input:focus, textarea:focus, select:focus {
 
   /* ---------- 렌더 ---------- */
   function render(){
+    out.heading.textContent = els.heading.value;
+
     out.issued.textContent = overrides.issued !== null
       ? overrides.issued
       : formatIssued(els.issued.value);
@@ -983,7 +996,7 @@ input:focus, textarea:focus, select:focus {
 
   // 폼 값이 바뀔 때마다 전체 다시 그리기 (+ render() 안에서 자동 저장까지 수행)
   [
-    els.issued, els.issueLabel, els.rating, els.title, els.original,
+    els.heading, els.issued, els.issueLabel, els.rating, els.title, els.original,
     els.date, els.session, els.start, els.end, els.screen, els.people
   ].forEach(function(el){ el.addEventListener("input", render); });
 
