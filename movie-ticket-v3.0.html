@@ -1,0 +1,1034 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>발권소 편집기 — 영화 티켓</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<style>
+
+@font-face {
+  font-family: "Galmuri14";
+  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@latest/dist/Galmuri14.woff2") format("woff2");
+  font-display: swap;
+}
+
+:root {
+  --primary: #3e7ccb;
+  --primary-light: #abd7ff;
+  --border: #dfe4eb;
+  --text: #17191d;
+  --muted: #777f8a;
+  --panel: #ffffff;
+  --bg: #f7f8fa;
+
+  /* 입력 필드 */
+  --field-border: #d7dde5;
+  --field-text: #1b1d21;
+  --field-focus-border: #8bb1df;
+  --field-focus-ring: rgba(62,124,203,.08);
+
+  /* 삭제/위험 액션 */
+  --danger: #c0504d;
+  --danger-border: #e3d3d3;
+  --danger-bg: #fff8f8;
+  --danger-bg-hover: #fdeeee;
+
+  /* 편집 강조(호버/포커스) */
+  --edit-ring: rgba(62,124,203,.45);
+  --edit-ring-strong: rgba(62,124,203,.6);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, "Noto Sans KR", sans-serif;
+}
+
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+
+.app {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 78px 1fr 42px;
+}
+
+/* ===== 상단바 ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(255,255,255,.94);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.brand { display: flex; align-items: center; gap: 15px; }
+
+.brand-icon {
+  width: 32px;
+  height: 44px;
+  border-radius: 4px 4px 7px 7px;
+  border: 2px solid #8bb4e3;
+  background: linear-gradient(#2d6db5 0 68%, #9ec7ee 68% 100%);
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,.08);
+  flex: none;
+}
+.brand-icon::after {
+  content: "";
+  position: absolute;
+  left: 7px; right: 7px; bottom: 4px;
+  height: 3px; border-radius: 3px;
+  background: #fff;
+}
+
+.brand-title { font-size: 21px; font-weight: 800; letter-spacing: -1px; }
+.brand-subtitle { margin-top: 3px; font-size: 12px; color: var(--muted); }
+
+.actions { display: flex; gap: 10px; }
+
+.action-btn {
+  min-width: 132px;
+  height: 42px;
+  border: 1px solid #6e9bd8;
+  border-radius: 6px;
+  color: var(--primary);
+  background: #fff;
+  font-weight: 700;
+}
+.action-btn:disabled { opacity: .65; cursor: wait; }
+.action-btn:hover { background: #f1f6fd; }
+
+/* ===== 본문 레이아웃 (왼쪽 편집기 + 오른쪽 미리보기) ===== */
+.main {
+  display: grid;
+  grid-template-columns: 372px minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 26px;
+  min-height: 0;
+}
+
+/* ===== 왼쪽 편집기 패널 ===== */
+.editor {
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: auto;
+  max-height: calc(100vh - 110px);
+}
+
+.editor-section { padding: 20px 18px 17px; border-bottom: 1px solid var(--border); }
+.editor-section:last-child { border-bottom: 0; }
+
+.section-title { margin: 0 0 7px; font-size: 15px; font-weight: 800; }
+.section-help { margin: 0 0 13px; color: var(--muted); font-size: 12px; }
+
+.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.segment {
+  height: 35px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-weight: 700;
+}
+.segment.active {
+  border-color: #b7cee9;
+  color: var(--primary);
+  background: #fbfdff;
+  box-shadow: inset 0 0 0 1px rgba(62,124,203,.1);
+}
+.segment::before {
+  content: "";
+  display: inline-block;
+  width: 13px; height: 13px;
+  border: 1px solid #cbd2dc;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -2px;
+  background: white;
+}
+.segment.active::before { border: 4px solid var(--primary); }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+
+.field { margin-bottom: 13px; }
+.field:last-child { margin-bottom: 0; }
+.field label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 800; }
+.field small { display: block; margin-top: 5px; color: #8b929d; font-size: 11px; }
+
+/* ===== 공용 입력 필드 ===== */
+input[type="text"], input[type="number"], input[type="date"],
+input[type="time"], input[type="datetime-local"], textarea, select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  outline: none;
+  background: #fff;
+  color: var(--field-text);
+}
+textarea { resize: vertical; min-height: 78px; line-height: 1.6; }
+input:focus, textarea:focus, select:focus {
+  border-color: var(--field-focus-border);
+  box-shadow: 0 0 0 2px var(--field-focus-ring);
+}
+
+/* ===== 좌석 / 유의사항 등 "추가·삭제 가능한 목록" 공용 스타일 ===== */
+.edit-list { display: grid; gap: 7px; }
+.edit-row { display: grid; grid-template-columns: 30px 1fr 30px; gap: 7px; align-items: center; }
+.edit-number {
+  height: 34px; display: grid; place-items: center;
+  border: 1px solid var(--field-border); border-radius: 5px;
+  color: #59616c; font-size: 12px; background: #f8f9fb;
+}
+.edit-remove {
+  height: 34px; border: 1px solid var(--danger-border); border-radius: 5px;
+  background: var(--danger-bg); color: var(--danger); font-size: 13px; font-weight: 700;
+}
+.edit-remove:hover { background: var(--danger-bg-hover); }
+.add-row-btn {
+  margin-top: 9px;
+  width: 100%; height: 34px;
+  border: 1px dashed #b9c3cf; border-radius: 6px;
+  background: #fff; color: var(--primary); font-weight: 700; font-size: 12.5px;
+}
+.add-row-btn:hover { background: #f4f8fd; }
+
+.row-actions { display: flex; gap: 8px; margin-top: 9px; }
+.row-actions .add-row-btn { margin-top: 0; flex: 1; }
+
+.colors { display: grid; gap: 12px; }
+.color-row { display: grid; grid-template-columns: 95px 1fr 105px; align-items: center; gap: 8px; }
+.color-row label { font-size: 12px; font-weight: 800; }
+.color-row input[type="color"] {
+  width: 76px; height: 31px; padding: 2px;
+  border: 1px solid #d7dde5; border-radius: 5px; background: white;
+}
+.color-code { font-size: 11px; color: var(--muted); }
+
+/* ===== 오른쪽 미리보기 패널 ===== */
+.preview {
+  min-width: 0; min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.preview-head { padding: 22px 18px 5px; }
+.preview-title { margin: 0 0 5px; font-size: 16px; font-weight: 800; }
+.preview-help { margin: 0; font-size: 12px; color: var(--muted); }
+
+.preview-area {
+  flex: 1; min-height: 0; overflow: auto;
+  padding: 18px 20px 34px;
+  display: flex; align-items: flex-start; justify-content: center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(62,124,203,.035), transparent 38%),
+    #fff;
+}
+
+.ticket-wrap { flex: none; padding: 20px; }
+
+/* ===== 영수증형 티켓 (실제 발권 결과물의 모양) ===== */
+.ticket {
+  position: relative;
+  width: 700px;
+  min-height: 1000px;
+  padding: 103px 47px 72px;
+  background: var(--ticket-bg);
+  color: var(--ticket-text);
+  box-shadow: 0 16px 35px rgba(0,0,0,.12);
+  font-family: "Galmuri14", "Noto Sans KR", monospace;
+  overflow: hidden;
+}
+.ticket::before {
+  content: "";
+  position: absolute; inset: 16px;
+  border: 1px solid rgba(0,0,0,.08);
+  pointer-events: none;
+}
+.ticket-content { position: relative; z-index: 1; }
+
+.ticket-header {
+  position: relative;
+  display: flex; align-items: flex-end; justify-content: flex-end;
+  min-height: 67px; margin-bottom: 28px;
+}
+.ticket-heading {
+  position: absolute; left: 50%; top: 0;
+  transform: translateX(-50%);
+  width: max-content;
+  font-size: 55px; letter-spacing: -3px; line-height: 1; text-align: center;
+}
+.ticket-issue { font-family: inherit; font-size: 16px; white-space: nowrap; }
+
+.ticket-divider { border: 0; border-top: 3px dashed var(--ticket-line); margin: 0 0 25px; }
+
+.ticket-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; }
+.issue-row { margin-bottom: 0; }
+.divider-after-people { margin-top: 30px; margin-bottom: 0; }
+
+.ticket-date { font-size: 16px; line-height: 1.45; }
+.ticket-rating { font-size: 17px; line-height: 1.4; white-space: nowrap; margin-top: 0; }
+
+.movie-title { margin-top: 8px; font-size: 57px; line-height: 1.03; letter-spacing: -4px; word-break: keep-all; }
+.movie-subtitle { margin-top: 5px; font-size: 18px; letter-spacing: .2px; font-family: inherit; }
+
+.showtime {
+  display: inline-block; margin-top: 27px;
+  padding: 4px 8px 3px;
+  background: var(--ticket-line); color: var(--ticket-bg);
+  font-size: 24px; line-height: 1.2;
+}
+.theater-seat { margin-top: 27px; font-size: 22px; line-height: 1.35; }
+.details-grid { display: block; margin-top: 0; }
+
+.people {
+  margin-top: 39px; padding: 22px 0 24px;
+  border-top: 3px dashed var(--ticket-line);
+  border-bottom: 3px dashed var(--ticket-line);
+  font-size: 23px;
+}
+.people-text { display: inline-block; }
+
+.notes { margin-top: 49px; display: grid; gap: 20px; font-size: 15px; line-height: 1.7; }
+.note::before { content: "* "; }
+
+.ticket-footer {
+  margin-top: 27px; text-align: right;
+  font-family: Arial, sans-serif; font-size: 10px; color: #777;
+}
+
+.status { padding: 0 26px; display: flex; align-items: center; justify-content: center; color: #9299a3; font-size: 11px; }
+.hidden { display: none !important; }
+
+/* ===== 티켓 위 직접 편집(드래그 후 타이핑) 강조 표시 ===== */
+.editable {
+  outline: none;
+  cursor: text;
+  border-radius: 3px;
+  transition: box-shadow .1s ease;
+}
+.editable:hover {
+  box-shadow: 0 0 0 1px var(--edit-ring);
+}
+.editable:focus {
+  box-shadow: 0 0 0 2px var(--edit-ring-strong);
+}
+.note.editable:hover, .note.editable:focus { box-shadow: 0 0 0 1px rgba(62,124,203,.3); }
+
+@media (max-width: 1180px) {
+  .ticket { width: 560px; padding: 80px 34px 56px; }
+  .ticket-heading { font-size: 44px; }
+  .movie-title { font-size: 44px; }
+}
+
+@media (max-width: 980px) {
+  .app { grid-template-rows: auto auto auto; }
+  .topbar { padding: 15px 18px; align-items: flex-start; gap: 12px; flex-wrap: wrap; position: static; }
+  .actions { flex-direction: row; flex-wrap: wrap; }
+  .action-btn { min-width: 112px; height: 38px; }
+  .main { grid-template-columns: 1fr; padding: 12px; }
+  .editor { max-height: none; }
+  .preview { min-height: 700px; }
+  .ticket { width: 100%; max-width: 480px; padding: 60px 24px 44px; }
+  .ticket-heading { font-size: 34px; }
+  .movie-title { font-size: 34px; }
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .ticket, .ticket * { visibility: visible; }
+  .ticket {
+    position: fixed; top: 20px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: none;
+    width: 700px;
+  }
+  .editable, .editable:hover, .editable:focus { box-shadow: none !important; background: transparent !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon"></div>
+      <div>
+        <div class="brand-title">발권소 편집기</div>
+        <div class="brand-subtitle">값을 직접 입력하면 오른쪽 티켓이 바로 바뀝니다</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="action-btn" id="btnPng">이미지로 저장</button>
+      <button class="action-btn" id="btnPrint">인쇄</button>
+      <button class="action-btn" id="btnReset">기본값으로 초기화</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="editor">
+
+      <div class="editor-section">
+        <h3 class="section-title">발권 정보</h3>
+        <p class="section-help">티켓 상단에 표시되는 발권 일시와 매수 라벨입니다.</p>
+        <div class="field">
+          <label for="f-issued">발권 일시</label>
+          <input type="datetime-local" id="f-issued">
+        </div>
+        <div class="field">
+          <label for="f-issueLabel">발권 라벨</label>
+          <input type="text" id="f-issueLabel" value="[전체 발권]">
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">상영 버전 · 등급</h3>
+        <div class="field">
+          <label>상영 형식</label>
+          <div class="segmented">
+            <button type="button" class="segment active" data-format="2D">2D</button>
+            <button type="button" class="segment" data-format="3D">3D</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-rating">관람등급</label>
+          <select id="f-rating">
+            <option value="전체 관람가">전체 관람가</option>
+            <option value="12세 이상 관람가" selected>12세 이상 관람가</option>
+            <option value="15세 이상 관람가">15세 이상 관람가</option>
+            <option value="청소년 관람불가">청소년 관람불가</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">영화 정보</h3>
+        <div class="field">
+          <label for="f-title">영화 제목</label>
+          <input type="text" id="f-title" value="집가고싶다">
+        </div>
+        <div class="field">
+          <label for="f-original">원제 / 부제</label>
+          <input type="text" id="f-original" value="I want to go home">
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">상영 정보</h3>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-date">상영 날짜</label>
+            <input type="date" id="f-date">
+          </div>
+          <div class="field">
+            <label for="f-session">회차</label>
+            <input type="number" id="f-session" min="1" value="1">
+          </div>
+          <div class="field">
+            <label for="f-start">시작 시간</label>
+            <input type="time" id="f-start" value="22:30">
+          </div>
+          <div class="field">
+            <label for="f-end">종료 시간</label>
+            <input type="text" id="f-end" value="22:30" inputmode="numeric" placeholder="예: 24:04">
+            <small>현재 시각으로 자동 채워지며, 24시를 넘겨도 "24:04"처럼 그대로 입력하면 표기에 반영됩니다.</small>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-screen">상영관</label>
+          <input type="text" id="f-screen" value="7">
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">좌석</h3>
+        <p class="section-help">좌석을 추가·삭제하면 인원수와 함께 반영됩니다.</p>
+        <div class="edit-list" id="seatList"></div>
+        <div class="row-actions">
+          <button type="button" class="add-row-btn" id="addSeat">+ 좌석 추가</button>
+          <button type="button" class="add-row-btn" id="sortSeats">↕ 좌석 정렬</button>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">인원</h3>
+        <div class="field">
+          <label for="f-people">인원 표기</label>
+          <input type="text" id="f-people" value="">
+          <small>비워두면 좌석 수를 기준으로 자동 채워집니다.</small>
+        </div>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">유의사항</h3>
+        <p class="section-help">문장을 추가·삭제하면서 하나씩 관리할 수 있어요.</p>
+        <div class="edit-list" id="noteList"></div>
+        <button type="button" class="add-row-btn" id="addNote">+ 유의사항 추가</button>
+      </div>
+
+      <div class="editor-section">
+        <h3 class="section-title">색상</h3>
+        <div class="colors">
+          <div class="color-row">
+            <label>배경색</label>
+            <input type="color" id="c-bg" value="#ffffff">
+            <span class="color-code" id="c-bg-code">#ffffff</span>
+          </div>
+          <div class="color-row">
+            <label>글자색</label>
+            <input type="color" id="c-text" value="#111111">
+            <span class="color-code" id="c-text-code">#111111</span>
+          </div>
+          <div class="color-row">
+            <label>선/포인트색</label>
+            <input type="color" id="c-line" value="#111111">
+            <span class="color-code" id="c-line-code">#111111</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="preview">
+      <div class="preview-head">
+        <h3 class="preview-title">미리보기</h3>
+        <p class="preview-help">티켓 위 글자를 드래그해서 선택한 뒤 바로 타이핑하면 그 자리에서 수정됩니다. 왼쪽 값을 바꿔도 반영돼요.</p>
+      </div>
+      <div class="preview-area">
+        <div class="ticket-wrap">
+          <div class="ticket" id="ticket" style="--ticket-bg:#ffffff; --ticket-text:#111111; --ticket-line:#111111;">
+            <div class="ticket-content">
+
+              <div class="ticket-header">
+                <div class="ticket-heading">영화입장권</div>
+              </div>
+
+              <div class="ticket-row issue-row">
+                <div class="ticket-date editable" id="out-issued" contenteditable="true"></div>
+                <div class="ticket-issue editable" id="out-issueLabel" contenteditable="true"></div>
+              </div>
+
+              <hr class="ticket-divider divider-before-rating">
+
+              <div class="ticket-rating editable" id="out-rating" contenteditable="true"></div>
+
+              <div class="movie-title editable" id="out-title" contenteditable="true"></div>
+              <div class="movie-subtitle editable" id="out-original" contenteditable="true"></div>
+
+              <div class="details-grid">
+                <div><div class="showtime editable" id="out-showtime" contenteditable="true"></div></div>
+                <div class="theater-seat editable" id="out-seats" contenteditable="true"></div>
+              </div>
+
+              <div class="people"><span class="people-text editable" id="out-people" contenteditable="true"></span></div>
+
+              <hr class="ticket-divider divider-after-people">
+              <div class="notes" id="out-notes"></div>
+
+              <div class="ticket-footer">MOVIE RECEIPT · TICKET EDITOR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status">발권소 편집기 v3.0 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* =========================================================
+   * 발권소 편집기
+   * - 왼쪽 폼(els.*)의 값을 읽어 오른쪽 티켓(out.*)에 그대로 반영한다.
+   * - 티켓 위 텍스트는 직접 드래그해서 고칠 수도 있는데(overrides),
+   *   그 경우 폼 값보다 우선 표시되다가 관련 폼 값이 바뀌면 해제된다.
+   * - 입력 내용은 매 변경마다 localStorage에 자동 저장되어,
+   *   새로고침하거나 다시 열어도 이어서 편집할 수 있다.
+   * ========================================================= */
+
+  var STORAGE_KEY = "boxOfficeTicketEditor:v1";
+
+  // "기본값으로 초기화" 시 되돌아갈 원본 샘플 값 (최초 배포 시 기준값)
+  var FACTORY_DEFAULTS = {
+    issueLabel: "[전체 발권]",
+    format: "2D",
+    rating: "12세 이상 관람가",
+    title: "월플라워",
+    original: "The Perks of Being a Wallflower",
+    session: "1",
+    screen: "8",
+    people: "",
+    seats: ["H열 12번", "H열 13번"],
+    notes: [
+      "티켓 미 지참 시 교환 및 환불 불가",
+      "결제수단 변경 및 교환, 환불은 상영시간 전 구매 매장에서 가능",
+      "지연 입장에 의한 관람 불편을 최소화 하고자 본 영화는 10분 후에 시작합니다."
+    ],
+    colors: { bg: "#ffffff", text: "#111111", line: "#111111" }
+  };
+
+  /* ---------- DOM 참조 ---------- */
+  var els = {
+    issued: document.getElementById("f-issued"),
+    issueLabel: document.getElementById("f-issueLabel"),
+    rating: document.getElementById("f-rating"),
+    title: document.getElementById("f-title"),
+    original: document.getElementById("f-original"),
+    date: document.getElementById("f-date"),
+    session: document.getElementById("f-session"),
+    start: document.getElementById("f-start"),
+    end: document.getElementById("f-end"),
+    screen: document.getElementById("f-screen"),
+    people: document.getElementById("f-people"),
+    seatList: document.getElementById("seatList"),
+    addSeat: document.getElementById("addSeat"),
+    sortSeats: document.getElementById("sortSeats"),
+    noteList: document.getElementById("noteList"),
+    addNote: document.getElementById("addNote"),
+    cBg: document.getElementById("c-bg"),
+    cText: document.getElementById("c-text"),
+    cLine: document.getElementById("c-line"),
+    ticket: document.getElementById("ticket"),
+    btnPng: document.getElementById("btnPng"),
+    btnPrint: document.getElementById("btnPrint"),
+    btnReset: document.getElementById("btnReset")
+  };
+
+  var out = {
+    issued: document.getElementById("out-issued"),
+    issueLabel: document.getElementById("out-issueLabel"),
+    rating: document.getElementById("out-rating"),
+    title: document.getElementById("out-title"),
+    original: document.getElementById("out-original"),
+    showtime: document.getElementById("out-showtime"),
+    seats: document.getElementById("out-seats"),
+    people: document.getElementById("out-people"),
+    notes: document.getElementById("out-notes")
+  };
+
+  /* ---------- 상태 ---------- */
+  var format = FACTORY_DEFAULTS.format;
+  var seats = FACTORY_DEFAULTS.seats.slice();
+  var notes = FACTORY_DEFAULTS.notes.slice();
+
+  // 티켓 위에서 직접 고친 값(override)은 폼 값보다 우선 표시된다.
+  // 관련 폼 값이 다시 바뀌면 해당 override는 null로 풀려서 폼 계산값으로 돌아간다.
+  var overrides = { issued: null, rating: null, showtime: null, seats: null };
+  var notesOverride = null;
+
+  var DAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+  /* ---------- 공통 유틸 ---------- */
+  function pad(n){ return n < 10 ? "0" + n : "" + n; }
+
+  // 빈 문자열(공백만 있는 것 포함)을 걸러낸 배열
+  function nonEmpty(list){
+    return list.filter(function(s){ return s.trim() !== ""; });
+  }
+
+  function nowDateValue(){
+    var now = new Date();
+    return now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+  }
+  function nowTimeValue(){
+    var now = new Date();
+    return pad(now.getHours()) + ":" + pad(now.getMinutes());
+  }
+
+  function setFormat(value){
+    format = value;
+    document.querySelectorAll(".segment[data-format]").forEach(function(btn){
+      btn.classList.toggle("active", btn.getAttribute("data-format") === value);
+    });
+  }
+
+  function setColors(colors){
+    els.cBg.value = colors.bg;
+    els.cText.value = colors.text;
+    els.cLine.value = colors.line;
+    document.getElementById("c-bg-code").textContent = colors.bg;
+    document.getElementById("c-text-code").textContent = colors.text;
+    document.getElementById("c-line-code").textContent = colors.line;
+    els.ticket.style.setProperty("--ticket-bg", colors.bg);
+    els.ticket.style.setProperty("--ticket-text", colors.text);
+    els.ticket.style.setProperty("--ticket-line", colors.line);
+  }
+
+  /* =========================================================
+   * 자동 저장 / 불러오기 / 초기화
+   * ========================================================= */
+
+  function collectState(){
+    return {
+      issued: els.issued.value,
+      issueLabel: els.issueLabel.value,
+      format: format,
+      rating: els.rating.value,
+      title: els.title.value,
+      original: els.original.value,
+      date: els.date.value,
+      session: els.session.value,
+      start: els.start.value,
+      end: els.end.value,
+      screen: els.screen.value,
+      people: els.people.value,
+      seats: seats.slice(),
+      notes: notes.slice(),
+      colors: { bg: els.cBg.value, text: els.cText.value, line: els.cLine.value }
+    };
+  }
+
+  function saveState(){
+    try{
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(collectState()));
+    } catch(e){ /* 저장 공간이 없거나 접근이 막힌 경우 - 조용히 무시 */ }
+  }
+
+  function loadState(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e){ return null; }
+  }
+
+  // 저장된 값 또는 기본값을 폼/상태에 그대로 채워 넣는다 (렌더링은 호출부에서 별도로 수행).
+  function applyState(state){
+    els.issued.value = state.issued;
+    els.issueLabel.value = state.issueLabel;
+    setFormat(state.format);
+    els.rating.value = state.rating;
+    els.title.value = state.title;
+    els.original.value = state.original;
+    els.date.value = state.date;
+    els.session.value = state.session;
+    els.start.value = state.start;
+    els.end.value = state.end;
+    els.screen.value = state.screen;
+    els.people.value = state.people;
+    seats = state.seats.slice();
+    notes = state.notes.slice();
+    setColors(state.colors);
+    overrides = { issued: null, rating: null, showtime: null, seats: null };
+    notesOverride = null;
+  }
+
+  // 공장 초기값으로 되돌린다. 발권일시·상영날짜·시작/종료 시간은 "지금"을 기준으로 새로 채운다.
+  function applyFactoryDefaults(){
+    var today = nowDateValue();
+    var now = nowTimeValue();
+    applyState({
+      issued: today + "T" + now,
+      issueLabel: FACTORY_DEFAULTS.issueLabel,
+      format: FACTORY_DEFAULTS.format,
+      rating: FACTORY_DEFAULTS.rating,
+      title: FACTORY_DEFAULTS.title,
+      original: FACTORY_DEFAULTS.original,
+      date: today,
+      session: FACTORY_DEFAULTS.session,
+      start: now,
+      end: now,
+      screen: FACTORY_DEFAULTS.screen,
+      people: FACTORY_DEFAULTS.people,
+      seats: FACTORY_DEFAULTS.seats,
+      notes: FACTORY_DEFAULTS.notes,
+      colors: FACTORY_DEFAULTS.colors
+    });
+  }
+
+  els.btnReset.addEventListener("click", function(){
+    var ok = window.confirm("모든 값을 기본값으로 되돌릴까요?\n저장된 편집 내용도 함께 지워집니다.");
+    if(!ok) return;
+    try{ localStorage.removeItem(STORAGE_KEY); } catch(e){}
+    applyFactoryDefaults();
+    renderSeatList();
+    renderNoteList();
+    render();
+  });
+
+  /* ---------- 티켓 위 텍스트 직접 편집(contenteditable) ---------- */
+  // Enter로 줄바꿈되지 않게 막고, 붙여넣기는 서식 없이 텍스트만 들어가게 한다.
+  function makeInlineEditable(el, onChange){
+    el.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){ e.preventDefault(); el.blur(); }
+    });
+    el.addEventListener("paste", function(e){
+      e.preventDefault();
+      var text = (e.clipboardData || window.clipboardData).getData("text/plain");
+      document.execCommand("insertText", false, text);
+    });
+    el.addEventListener("input", onChange);
+  }
+
+  // 조합값(rating/showtime/seats/issued)은 override로 저장 — 폼과 별도로 값을 기억해야 하므로.
+  makeInlineEditable(out.issued, function(){ overrides.issued = out.issued.textContent; saveState(); });
+  makeInlineEditable(out.rating, function(){ overrides.rating = out.rating.textContent; saveState(); });
+  makeInlineEditable(out.showtime, function(){ overrides.showtime = out.showtime.textContent; saveState(); });
+  makeInlineEditable(out.seats, function(){ overrides.seats = out.seats.textContent; saveState(); });
+
+  // 1:1로 대응되는 값(제목/원제/발권 라벨/인원)은 override 없이 폼 입력값 자체를 갱신한다.
+  makeInlineEditable(out.title, function(){ els.title.value = out.title.textContent; saveState(); });
+  makeInlineEditable(out.original, function(){ els.original.value = out.original.textContent; saveState(); });
+  makeInlineEditable(out.issueLabel, function(){ els.issueLabel.value = out.issueLabel.textContent; saveState(); });
+  makeInlineEditable(out.people, function(){ els.people.value = out.people.textContent; saveState(); });
+
+  /* ---------- "추가·삭제 가능한 목록" 공용 렌더러 ----------
+   * 좌석 목록과 유의사항 목록은 구조가 동일(번호 + 입력칸 + 삭제 버튼)하므로
+   * 하나의 팩토리 함수로 만들어 중복을 없앤다.
+   */
+  function renderEditableList(items, container, onItemChange, onItemRemove){
+    container.innerHTML = "";
+    items.forEach(function(value, idx){
+      var row = document.createElement("div");
+      row.className = "edit-row";
+      row.innerHTML =
+        '<div class="edit-number">' + (idx + 1) + '</div>' +
+        '<input type="text" value="' + value.replace(/"/g, "&quot;") + '">' +
+        '<button type="button" class="edit-remove" title="삭제">×</button>';
+
+      row.querySelector("input").addEventListener("input", function(e){
+        items[idx] = e.target.value;
+        onItemChange();
+      });
+
+      row.querySelector(".edit-remove").addEventListener("click", function(){
+        if(items.length <= 1) return; // 최소 1개는 남긴다
+        items.splice(idx, 1);
+        onItemRemove();
+      });
+
+      container.appendChild(row);
+    });
+  }
+
+  function focusLastInput(container){
+    var inputs = container.querySelectorAll(".edit-row input");
+    if(inputs.length) inputs[inputs.length - 1].focus();
+  }
+
+  /* ---------- 좌석 목록 ---------- */
+  function renderSeatList(){
+    renderEditableList(
+      seats, els.seatList,
+      function(){ overrides.seats = null; render(); },
+      function(){ overrides.seats = null; renderSeatList(); render(); }
+    );
+  }
+
+  els.addSeat.addEventListener("click", function(){
+    seats.push("");
+    overrides.seats = null;
+    renderSeatList();
+    render();
+    focusLastInput(els.seatList);
+  });
+
+  // 자연스러운 순서(숫자를 진짜 크기로 비교)로 정렬 + 완전히 같은 좌석 표기는 하나만 남긴다.
+  els.sortSeats.addEventListener("click", function(){
+    var deduped = [];
+    seats.forEach(function(seat){
+      var trimmed = seat.trim();
+      if(trimmed !== "" && deduped.indexOf(trimmed) === -1) deduped.push(trimmed);
+    });
+    deduped.sort(function(a, b){
+      return a.localeCompare(b, "ko", { numeric: true, sensitivity: "base" });
+    });
+    seats = deduped.length ? deduped : [""];
+    overrides.seats = null;
+    renderSeatList();
+    render();
+  });
+
+  /* ---------- 유의사항 목록 ---------- */
+  function renderNoteList(){
+    renderEditableList(
+      notes, els.noteList,
+      function(){ notesOverride = null; render(); },
+      function(){ notesOverride = null; renderNoteList(); render(); }
+    );
+  }
+
+  els.addNote.addEventListener("click", function(){
+    notes.push("");
+    notesOverride = null;
+    renderNoteList();
+    render();
+    focusLastInput(els.noteList);
+  });
+
+  /* ---------- 2D/3D 세그먼트 ---------- */
+  document.querySelectorAll(".segment[data-format]").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      setFormat(btn.getAttribute("data-format"));
+      overrides.rating = null;
+      render();
+    });
+  });
+
+  /* ---------- 왼쪽 패널 값이 바뀌면 관련된 직접-편집(override)은 해제 ---------- */
+  [
+    { el: els.issued, key: "issued" },
+    { el: els.rating, key: "rating" },
+    { el: els.date, key: "showtime" },
+    { el: els.session, key: "showtime" },
+    { el: els.start, key: "showtime" },
+    { el: els.end, key: "showtime" },
+    { el: els.screen, key: "seats" }
+  ].forEach(function(binding){
+    binding.el.addEventListener("input", function(){ overrides[binding.key] = null; });
+  });
+
+  /* ---------- 색상 ---------- */
+  function bindColor(input, code, cssVar){
+    input.addEventListener("input", function(){
+      code.textContent = input.value;
+      els.ticket.style.setProperty(cssVar, input.value);
+      saveState();
+    });
+  }
+  bindColor(els.cBg, document.getElementById("c-bg-code"), "--ticket-bg");
+  bindColor(els.cText, document.getElementById("c-text-code"), "--ticket-text");
+  bindColor(els.cLine, document.getElementById("c-line-code"), "--ticket-line");
+
+  /* ---------- 날짜 포맷 ---------- */
+  // datetime-local 값 "YYYY-MM-DDTHH:MM" -> "YYYY-MM-DD HH:MM"
+  function formatIssued(value){
+    if(!value) return "";
+    var d = new Date(value);
+    if(isNaN(d.getTime())) return value;
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) +
+      " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }
+
+  // date 값 "YYYY-MM-DD" -> "YYYY.MM.DD(요일)"
+  function formatShowDate(value){
+    if(!value) return "";
+    var parts = value.split("-");
+    var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    return parts[0] + "." + parts[1] + "." + parts[2] + "(" + DAYS[d.getDay()] + ")";
+  }
+
+  /* ---------- 렌더 ---------- */
+  function render(){
+    out.issued.textContent = overrides.issued !== null
+      ? overrides.issued
+      : formatIssued(els.issued.value);
+
+    out.issueLabel.textContent = els.issueLabel.value;
+
+    out.rating.textContent = overrides.rating !== null
+      ? overrides.rating
+      : format + ", " + els.rating.value;
+
+    out.title.textContent = els.title.value;
+    out.original.textContent = els.original.value;
+
+    var session = els.session.value || "1";
+    var showDate = formatShowDate(els.date.value);
+    out.showtime.textContent = overrides.showtime !== null
+      ? overrides.showtime
+      : showDate + " " + session + "회 " + els.start.value + "-" + els.end.value;
+
+    var activeSeats = nonEmpty(seats);
+    out.seats.textContent = overrides.seats !== null
+      ? overrides.seats
+      : els.screen.value + "관 " + activeSeats.join(", ");
+
+    var peopleText = els.people.value.trim() || ("총 인원 " + activeSeats.length + "명");
+    out.people.textContent = peopleText;
+
+    renderNotes();
+    saveState();
+  }
+
+  // 유의사항은 여러 줄이라 별도 함수로 분리 — 각 줄도 티켓에서 바로 편집 가능해야 한다.
+  function renderNotes(){
+    out.notes.innerHTML = "";
+    var lines = notesOverride !== null ? notesOverride : nonEmpty(notes.map(function(l){ return l.trim(); }));
+
+    lines.forEach(function(line){
+      var div = document.createElement("div");
+      div.className = "note editable";
+      div.setAttribute("contenteditable", "true");
+      div.textContent = line;
+      makeInlineEditable(div, function(){
+        notesOverride = Array.prototype.map.call(
+          out.notes.querySelectorAll(".note"),
+          function(n){ return n.textContent; }
+        );
+        saveState();
+      });
+      out.notes.appendChild(div);
+    });
+  }
+
+  // 폼 값이 바뀔 때마다 전체 다시 그리기 (+ render() 안에서 자동 저장까지 수행)
+  [
+    els.issued, els.issueLabel, els.rating, els.title, els.original,
+    els.date, els.session, els.start, els.end, els.screen, els.people
+  ].forEach(function(el){ el.addEventListener("input", render); });
+
+  /* ---------- 내보내기 (인쇄 / PNG 저장) ---------- */
+  els.btnPrint.addEventListener("click", function(){ window.print(); });
+
+  els.btnPng.addEventListener("click", function(){
+    if(typeof html2canvas === "undefined"){
+      alert("이미지 저장 기능을 불러오지 못했습니다. 인쇄 기능을 이용해 주세요.");
+      return;
+    }
+    els.btnPng.disabled = true;
+    els.btnPng.textContent = "저장 중…";
+
+    html2canvas(els.ticket, { backgroundColor: null, scale: 2 })
+      .then(function(canvas){
+        var link = document.createElement("a");
+        link.download = (els.title.value || "movie-ticket") + ".png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      })
+      .catch(function(){
+        alert("이미지 저장 중 문제가 발생했습니다.");
+      })
+      .finally(function(){
+        els.btnPng.disabled = false;
+        els.btnPng.textContent = "이미지로 저장";
+      });
+  });
+
+  /* ---------- 시작: 저장된 값이 있으면 불러오고, 없으면 현재 시각 기준 기본값 사용 ---------- */
+  (function init(){
+    var saved = loadState();
+    if(saved){
+      applyState(saved);
+    } else {
+      applyFactoryDefaults();
+    }
+  })();
+
+  renderSeatList();
+  renderNoteList();
+  render();
+
+})();
+</script>
+</body>
+</html>
