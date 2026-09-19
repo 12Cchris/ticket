@@ -3,16 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>발권소 편집기 — 영화 티켓</title>
+<title>발권소 편집기 — 입장권</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+<!-- Galmuri14 픽셀 폰트: 공식 npm 배포 경로 사용 (gh/@latest 경로는 간헐적으로 로드 실패해 대체함) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
 <style>
-
-@font-face {
-  font-family: "Galmuri14";
-  src: url("https://cdn.jsdelivr.net/gh/quiple/galmuri@latest/dist/Galmuri14.woff2") format("woff2");
-  font-display: swap;
-}
 
 :root {
   --primary: #3e7ccb;
@@ -100,11 +96,13 @@ button { cursor: pointer; }
 .action-btn {
   min-width: 132px;
   height: 42px;
+  padding: 0 18px;
   border: 1px solid #6e9bd8;
   border-radius: 6px;
   color: var(--primary);
   background: #fff;
   font-weight: 700;
+  white-space: nowrap;
 }
 .action-btn:disabled { opacity: .65; cursor: wait; }
 .action-btn:hover { background: #f1f6fd; }
@@ -133,33 +131,6 @@ button { cursor: pointer; }
 
 .section-title { margin: 0 0 7px; font-size: 15px; font-weight: 800; }
 .section-help { margin: 0 0 13px; color: var(--muted); font-size: 12px; }
-
-.segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-.segment {
-  height: 35px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #fff;
-  color: #333;
-  font-weight: 700;
-}
-.segment.active {
-  border-color: #b7cee9;
-  color: var(--primary);
-  background: #fbfdff;
-  box-shadow: inset 0 0 0 1px rgba(62,124,203,.1);
-}
-.segment::before {
-  content: "";
-  display: inline-block;
-  width: 13px; height: 13px;
-  border: 1px solid #cbd2dc;
-  border-radius: 50%;
-  margin-right: 8px;
-  vertical-align: -2px;
-  background: white;
-}
-.segment.active::before { border: 4px solid var(--primary); }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 
@@ -389,7 +360,7 @@ input:focus, textarea:focus, select:focus {
         <p class="section-help">티켓 상단에 표시되는 발권 일시와 매수 라벨입니다.</p>
         <div class="field">
           <label for="f-heading">티켓 제목</label>
-          <input type="text" id="f-heading" value="영화입장권">
+          <input type="text" id="f-heading" value="입장권">
         </div>
         <div class="field">
           <label for="f-issued">발권 일시</label>
@@ -402,42 +373,37 @@ input:focus, textarea:focus, select:focus {
       </div>
 
       <div class="editor-section">
-        <h3 class="section-title">상영 버전 · 등급</h3>
-        <div class="field">
-          <label>상영 형식</label>
-          <div class="segmented">
-            <button type="button" class="segment active" data-format="2D">2D</button>
-            <button type="button" class="segment" data-format="3D">3D</button>
+        <h3 class="section-title">버전 · 등급</h3>
+        <p class="section-help">영화 외의 입장권(공연, 전시, 스포츠 등)에도 쓸 수 있도록 자유롭게 입력하는 항목이에요.</p>
+        <div class="grid-2">
+          <div class="field">
+            <label for="f-format">버전 / 타입</label>
+            <input type="text" id="f-format" value="2D" placeholder="예: 2D, VIP, 스탠딩">
           </div>
-        </div>
-        <div class="field">
-          <label for="f-rating">관람등급</label>
-          <select id="f-rating">
-            <option value="전체 관람가">전체 관람가</option>
-            <option value="12세 이상 관람가" selected>12세 이상 관람가</option>
-            <option value="15세 이상 관람가">15세 이상 관람가</option>
-            <option value="청소년 관람불가">청소년 관람불가</option>
-          </select>
+          <div class="field">
+            <label for="f-rating">등급 / 제한</label>
+            <input type="text" id="f-rating" value="12세 이상 관람가" placeholder="예: 전체 이용가, 만 19세 이상">
+          </div>
         </div>
       </div>
 
       <div class="editor-section">
-        <h3 class="section-title">영화 정보</h3>
+        <h3 class="section-title">제목 정보</h3>
         <div class="field">
-          <label for="f-title">영화 제목</label>
+          <label for="f-title">제목</label>
           <input type="text" id="f-title" value="집가고싶다">
         </div>
         <div class="field">
-          <label for="f-original">원제 / 부제</label>
+          <label for="f-original">부제 / 원어명</label>
           <input type="text" id="f-original" value="I want to go home">
         </div>
       </div>
 
       <div class="editor-section">
-        <h3 class="section-title">상영 정보</h3>
+        <h3 class="section-title">일시 · 장소</h3>
         <div class="grid-2">
           <div class="field">
-            <label for="f-date">상영 날짜</label>
+            <label for="f-date">날짜</label>
             <input type="date" id="f-date">
           </div>
           <div class="field">
@@ -455,8 +421,9 @@ input:focus, textarea:focus, select:focus {
           </div>
         </div>
         <div class="field">
-          <label for="f-screen">상영관</label>
-          <input type="text" id="f-screen" value="7">
+          <label for="f-screen">장소 / 구역</label>
+          <input type="text" id="f-screen" value="7관" placeholder="예: 8관, A구역, 전시실 2, 3층 105">
+          <small>단위(관, 구역 등)까지 포함해서 원하는 대로 입력하세요.</small>
         </div>
       </div>
 
@@ -520,7 +487,7 @@ input:focus, textarea:focus, select:focus {
             <div class="ticket-content">
 
               <div class="ticket-header">
-                <div class="ticket-heading editable" id="out-heading" contenteditable="true">영화입장권</div>
+                <div class="ticket-heading editable" id="out-heading" contenteditable="true">입장권</div>
               </div>
 
               <div class="ticket-row issue-row">
@@ -553,7 +520,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">발권소 편집기 v3.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">발권소 편집기 v3.4 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -574,20 +541,20 @@ input:focus, textarea:focus, select:focus {
 
   // "기본값으로 초기화" 시 되돌아갈 원본 샘플 값 (최초 배포 시 기준값)
   var FACTORY_DEFAULTS = {
-    heading: "영화입장권",
+    heading: "입장권",
     issueLabel: "[전체 발권]",
     format: "2D",
     rating: "12세 이상 관람가",
     title: "월플라워",
     original: "The Perks of Being a Wallflower",
     session: "1",
-    screen: "8",
+    screen: "8관",
     people: "",
     seats: ["H열 12번", "H열 13번"],
     notes: [
       "티켓 미 지참 시 교환 및 환불 불가",
-      "결제수단 변경 및 교환, 환불은 상영시간 전 구매 매장에서 가능",
-      "지연 입장에 의한 관람 불편을 최소화 하고자 본 영화는 10분 후에 시작합니다."
+      "결제수단 변경 및 교환, 환불은 시작 전 구매처에서 가능",
+      "지연 입장에 의한 불편을 최소화하고자 10분 후에 시작합니다."
     ],
     colors: { bg: "#ffffff", text: "#111111", line: "#111111" }
   };
@@ -597,6 +564,7 @@ input:focus, textarea:focus, select:focus {
     heading: document.getElementById("f-heading"),
     issued: document.getElementById("f-issued"),
     issueLabel: document.getElementById("f-issueLabel"),
+    format: document.getElementById("f-format"),
     rating: document.getElementById("f-rating"),
     title: document.getElementById("f-title"),
     original: document.getElementById("f-original"),
@@ -634,7 +602,6 @@ input:focus, textarea:focus, select:focus {
   };
 
   /* ---------- 상태 ---------- */
-  var format = FACTORY_DEFAULTS.format;
   var seats = FACTORY_DEFAULTS.seats.slice();
   var notes = FACTORY_DEFAULTS.notes.slice();
 
@@ -662,13 +629,6 @@ input:focus, textarea:focus, select:focus {
     return pad(now.getHours()) + ":" + pad(now.getMinutes());
   }
 
-  function setFormat(value){
-    format = value;
-    document.querySelectorAll(".segment[data-format]").forEach(function(btn){
-      btn.classList.toggle("active", btn.getAttribute("data-format") === value);
-    });
-  }
-
   function setColors(colors){
     els.cBg.value = colors.bg;
     els.cText.value = colors.text;
@@ -690,7 +650,7 @@ input:focus, textarea:focus, select:focus {
       heading: els.heading.value,
       issued: els.issued.value,
       issueLabel: els.issueLabel.value,
-      format: format,
+      format: els.format.value,
       rating: els.rating.value,
       title: els.title.value,
       original: els.original.value,
@@ -724,7 +684,7 @@ input:focus, textarea:focus, select:focus {
     els.heading.value = state.heading || FACTORY_DEFAULTS.heading;
     els.issued.value = state.issued;
     els.issueLabel.value = state.issueLabel;
-    setFormat(state.format);
+    els.format.value = state.format || FACTORY_DEFAULTS.format;
     els.rating.value = state.rating;
     els.title.value = state.title;
     els.original.value = state.original;
@@ -886,18 +846,10 @@ input:focus, textarea:focus, select:focus {
     focusLastInput(els.noteList);
   });
 
-  /* ---------- 2D/3D 세그먼트 ---------- */
-  document.querySelectorAll(".segment[data-format]").forEach(function(btn){
-    btn.addEventListener("click", function(){
-      setFormat(btn.getAttribute("data-format"));
-      overrides.rating = null;
-      render();
-    });
-  });
-
   /* ---------- 왼쪽 패널 값이 바뀌면 관련된 직접-편집(override)은 해제 ---------- */
   [
     { el: els.issued, key: "issued" },
+    { el: els.format, key: "rating" },
     { el: els.rating, key: "rating" },
     { el: els.date, key: "showtime" },
     { el: els.session, key: "showtime" },
@@ -950,7 +902,7 @@ input:focus, textarea:focus, select:focus {
 
     out.rating.textContent = overrides.rating !== null
       ? overrides.rating
-      : format + ", " + els.rating.value;
+      : els.format.value + ", " + els.rating.value;
 
     out.title.textContent = els.title.value;
     out.original.textContent = els.original.value;
@@ -964,7 +916,7 @@ input:focus, textarea:focus, select:focus {
     var activeSeats = nonEmpty(seats);
     out.seats.textContent = overrides.seats !== null
       ? overrides.seats
-      : els.screen.value + "관 " + activeSeats.join(", ");
+      : (els.screen.value.trim() ? els.screen.value.trim() + " " : "") + activeSeats.join(", ");
 
     var peopleText = els.people.value.trim() || ("총 인원 " + activeSeats.length + "명");
     out.people.textContent = peopleText;
@@ -996,7 +948,7 @@ input:focus, textarea:focus, select:focus {
 
   // 폼 값이 바뀔 때마다 전체 다시 그리기 (+ render() 안에서 자동 저장까지 수행)
   [
-    els.heading, els.issued, els.issueLabel, els.rating, els.title, els.original,
+    els.heading, els.issued, els.issueLabel, els.format, els.rating, els.title, els.original,
     els.date, els.session, els.start, els.end, els.screen, els.people
   ].forEach(function(el){ el.addEventListener("input", render); });
 
