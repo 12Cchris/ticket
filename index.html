@@ -360,7 +360,7 @@ input:focus, textarea:focus, select:focus {
         <p class="section-help">티켓 상단에 표시되는 발권 일시와 매수 라벨입니다.</p>
         <div class="field">
           <label for="f-heading">티켓 제목</label>
-          <input type="text" id="f-heading" value="영화입장권">
+          <input type="text" id="f-heading">
         </div>
         <div class="field">
           <label for="f-issued">발권 일시</label>
@@ -368,7 +368,7 @@ input:focus, textarea:focus, select:focus {
         </div>
         <div class="field">
           <label for="f-issueLabel">발권 라벨</label>
-          <input type="text" id="f-issueLabel" value="[전체 발권]">
+          <input type="text" id="f-issueLabel">
         </div>
       </div>
 
@@ -378,11 +378,11 @@ input:focus, textarea:focus, select:focus {
         <div class="grid-2">
           <div class="field">
             <label for="f-format">버전 / 타입</label>
-            <input type="text" id="f-format" value="2D" placeholder="예: 2D, VIP, 스탠딩">
+            <input type="text" id="f-format" placeholder="예: 2D, VIP, 스탠딩">
           </div>
           <div class="field">
             <label for="f-rating">등급 / 제한</label>
-            <input type="text" id="f-rating" value="12세 이상 관람가" placeholder="예: 전체 이용가, 만 19세 이상">
+            <input type="text" id="f-rating" placeholder="예: 전체 이용가, 만 19세 이상">
           </div>
         </div>
       </div>
@@ -391,11 +391,11 @@ input:focus, textarea:focus, select:focus {
         <h3 class="section-title">제목 정보</h3>
         <div class="field">
           <label for="f-title">제목</label>
-          <input type="text" id="f-title" value="집가고싶다">
+          <input type="text" id="f-title">
         </div>
         <div class="field">
           <label for="f-original">부제 / 원어명</label>
-          <input type="text" id="f-original" value="I want to go home">
+          <input type="text" id="f-original">
         </div>
       </div>
 
@@ -408,21 +408,21 @@ input:focus, textarea:focus, select:focus {
           </div>
           <div class="field">
             <label for="f-session">회차</label>
-            <input type="number" id="f-session" min="1" value="1">
+            <input type="number" id="f-session" min="1">
           </div>
           <div class="field">
             <label for="f-start">시작 시간</label>
-            <input type="time" id="f-start" value="22:30">
+            <input type="time" id="f-start">
           </div>
           <div class="field">
             <label for="f-end">종료 시간</label>
-            <input type="text" id="f-end" value="22:30" inputmode="numeric" placeholder="예: 24:04">
+            <input type="text" id="f-end" inputmode="numeric" placeholder="예: 24:04">
             <small>현재 시각으로 자동 채워지며, 24시를 넘겨도 "24:04"처럼 그대로 입력하면 표기에 반영됩니다.</small>
           </div>
         </div>
         <div class="field">
           <label for="f-screen">장소 / 구역</label>
-          <input type="text" id="f-screen" value="7관" placeholder="예: 8관, A구역, 전시실 2, 3층 105">
+          <input type="text" id="f-screen" placeholder="예: 8관, A구역, 전시실 2, 3층 105">
           <small>단위(관, 구역 등)까지 포함해서 원하는 대로 입력하세요.</small>
         </div>
       </div>
@@ -487,7 +487,7 @@ input:focus, textarea:focus, select:focus {
             <div class="ticket-content">
 
               <div class="ticket-header">
-                <div class="ticket-heading editable" id="out-heading" contenteditable="true">영화입장권</div>
+                <div class="ticket-heading editable" id="out-heading" contenteditable="true"></div>
               </div>
 
               <div class="ticket-row issue-row">
@@ -520,7 +520,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">발권소 편집기 v3.4.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">발권소 편집기 v3.4.3 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -545,10 +545,10 @@ input:focus, textarea:focus, select:focus {
     issueLabel: "[전체 발권]",
     format: "2D",
     rating: "12세 이상 관람가",
-    title: "월플라워",
-    original: "The Perks of Being a Wallflower",
+    title: "집가고싶다",
+    original: "I want to go home",
     session: "1",
-    screen: "8관",
+    screen: "7관",
     people: "",
     seats: ["H열 12번", "H열 13번"],
     notes: [
