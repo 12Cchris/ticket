@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>발권소 편집기 — 입장권</title>
+<title>입장권 편집기 — 입장권</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <!-- Galmuri14 픽셀 폰트: 공식 npm 배포 경로 사용 (gh/@latest 경로는 간헐적으로 로드 실패해 대체함) -->
@@ -422,7 +422,7 @@ input:focus, textarea:focus, select:focus {
     <div class="brand">
       <div class="brand-icon"></div>
       <div>
-        <div class="brand-title">발권소 편집기</div>
+        <div class="brand-title">입장권 편집기</div>
         <div class="brand-subtitle">값을 직접 입력하면 오른쪽 티켓이 바로 바뀝니다</div>
       </div>
     </div>
@@ -647,7 +647,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">발권소 편집기 v4.1.0 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">입장권 편집기 v4.1.0 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -656,7 +656,7 @@ input:focus, textarea:focus, select:focus {
   "use strict";
 
   /* =========================================================
-   * 발권소 편집기 (영화 입장권 / 테마파크 입장권 전환)
+   * 입장권 편집기 (영화 입장권 / 테마파크 입장권 전환)
    * - 상단의 [영화] [테마파크] 버튼으로 입장권 종류를 바꾼다.
    *   종류마다 입력값을 따로 기억하므로, 왔다갔다 해도 서로 값이 섞이거나 사라지지 않는다.
    * - 왼쪽 폼(els.*)의 값을 읽어 오른쪽 티켓(out.*)에 그대로 반영한다.
@@ -1013,7 +1013,7 @@ input:focus, textarea:focus, select:focus {
       input.placeholder = input.getAttribute(isPark ? "data-ph-park" : "data-ph-movie");
     });
 
-    document.title = "발권소 편집기 — " + MODE_LABELS[mode] + " 입장권";
+    document.title = "입장권 편집기 — " + MODE_LABELS[mode] + " 입장권";
   }
 
   function renderAllLists(){
