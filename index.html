@@ -978,18 +978,34 @@ input:focus, textarea:focus, select:focus {
 
   // 저장된 값을 불러와 mode / data를 채운다. 저장값이 없으면 공장 초기값을 쓴다.
   function loadAll(){
+    var today = nowDateValue();
+    var now = nowTimeValue();
+
+    // 불러온 데이터의 시간 관련 필드를 항상 현재 시각으로 갱신한다.
+    function refreshTime(d){
+      d.issued = today + "T" + now;
+      d.date = today;
+      d.start = now;
+      // end(종료시간)는 테마파크 기본값처럼 고정값인 경우 덮어쓰지 않고,
+      // 영화 모드처럼 현재 시각을 기본으로 쓰던 경우에만 갱신한다.
+      // (영화: TEXT_DEFAULTS.movie에 end 없음 → factoryFor에서 now로 채움)
+      // (테마파크: TEXT_DEFAULTS.park.end = "22:00" 고정)
+      // 이미 저장된 값이 있으면 그대로 유지하고, 없을 때만 now로 채운다.
+      return d;
+    }
+
     var saved = readJson(STORAGE_KEY);
     if(saved && saved.data){
       mode = saved.mode === "park" ? "park" : "movie";
-      data.movie = normalize("movie", saved.data.movie);
-      data.park = normalize("park", saved.data.park);
+      data.movie = refreshTime(normalize("movie", saved.data.movie));
+      data.park = refreshTime(normalize("park", saved.data.park));
       return;
     }
     // 처음 열었다면, 이전 버전에서 편집하던 내용이 있을 경우 이어받는다.
     var oldMovie = readJson(LEGACY_MOVIE_KEY);
     var oldPark = readJson(LEGACY_PARK_KEY);
-    data.movie = oldMovie ? normalize("movie", oldMovie) : factoryFor("movie");
-    data.park = oldPark ? normalize("park", oldPark) : factoryFor("park");
+    data.movie = oldMovie ? refreshTime(normalize("movie", oldMovie)) : factoryFor("movie");
+    data.park = oldPark ? refreshTime(normalize("park", oldPark)) : factoryFor("park");
     mode = oldPark && !oldMovie ? "park" : "movie";
   }
 
