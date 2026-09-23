@@ -647,7 +647,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">입장권 편집기 v4.1.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">입장권 편집기 v4.2.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -962,12 +962,31 @@ input:focus, textarea:focus, select:focus {
    * 자동 저장 / 불러오기
    * ========================================================= */
 
-  function saveState(){
-    data[mode] = collectForm();
+  // 글자 하나 칠 때마다 바로 localStorage에 쓰면(직렬화 + 동기 저장) 타이핑이 잦을 때 불필요한 부하가 쌓이므로,
+  // 실제 쓰기는 짧게 모아서(디바운스) 한 번만 하고, 창을 닫거나 새로고침할 때는 즉시 flush한다.
+  var saveTimer = null;
+  var SAVE_DEBOUNCE_MS = 250;
+
+  function persistNow(){
+    saveTimer = null;
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: mode, data: data }));
     } catch(e){ /* 저장 공간이 없거나 접근이 막힌 경우 - 조용히 무시 */ }
   }
+
+  function saveState(){
+    data[mode] = collectForm(); // 폼 값 자체는 항상 즉시 반영 — 지연되는 건 localStorage 쓰기뿐
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistNow, SAVE_DEBOUNCE_MS);
+  }
+
+  // 디바운스 중 페이지를 벗어나면(닫기/새로고침/모드 전환 등) 쌓인 변경분을 즉시 저장한다.
+  window.addEventListener("beforeunload", function(){
+    if(saveTimer){ clearTimeout(saveTimer); persistNow(); }
+  });
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "hidden" && saveTimer){ clearTimeout(saveTimer); persistNow(); }
+  });
 
   function readJson(key){
     try{
@@ -981,16 +1000,14 @@ input:focus, textarea:focus, select:focus {
     var today = nowDateValue();
     var now = nowTimeValue();
 
-    // 불러온 데이터의 시간 관련 필드를 항상 현재 시각으로 갱신한다.
+    // 불러온 데이터의 시간 관련 필드(발권일시·날짜·시작·종료)는 모드와 상관없이
+    // 항상 현재 시각으로 갱신한다. (테마파크의 "22:00" 등 고정 기본값은 처음 만들어질 때만 쓰이고,
+    // 그 뒤로 저장값을 다시 불러올 때는 다른 시간 필드와 똑같이 현재 시각으로 맞춘다.)
     function refreshTime(d){
       d.issued = today + "T" + now;
       d.date = today;
       d.start = now;
-      // end(종료시간)는 테마파크 기본값처럼 고정값인 경우 덮어쓰지 않고,
-      // 영화 모드처럼 현재 시각을 기본으로 쓰던 경우에만 갱신한다.
-      // (영화: TEXT_DEFAULTS.movie에 end 없음 → factoryFor에서 now로 채움)
-      // (테마파크: TEXT_DEFAULTS.park.end = "22:00" 고정)
-      // 이미 저장된 값이 있으면 그대로 유지하고, 없을 때만 now로 채운다.
+      d.end = now;
       return d;
     }
 
