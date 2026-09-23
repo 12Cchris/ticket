@@ -647,7 +647,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">입장권 편집기 v4.2.1 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">입장권 편집기 v4.2.3 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -706,7 +706,7 @@ input:focus, textarea:focus, select:focus {
       notes: [
         "티켓 미 지참 시 교환 및 환불 불가",
         "결제수단 변경 및 교환, 환불은 시작 전 구매처에서 가능",
-        "지연 입장에 의한 불편을 최소화하고자 10분 후에 시작합니다."
+        "본인 연령에 맞지 않는 영화 관람 시, 강제 퇴장 조치되실 수 있습니다."
       ]
     },
     park: {
@@ -714,15 +714,15 @@ input:focus, textarea:focus, select:focus {
       issueLabel: "[현장 발권]",
       format: "1DAY 종일권",
       rating: "선택 어트랙션 이용",
-      title: "드림랜드 어드벤처",
-      original: "DREAMLAND ADVENTURE",
+      title: "유쾌! 테마파크",
+      original: "Fun! Theme Park",
       start: "09:30",
       end: "22:00",
       screen: "정문 A게이트",
       notes: [
-        "티켓 분실 시 재발급 및 환불 불가",
+        "티켓 분실 시 재발급 및 재입장 불가",
         "일부 어트랙션은 키·연령·건강 상태에 따라 이용이 제한될 수 있습니다.",
-        "우천 및 안전 점검 시 일부 운영이 중단될 수 있으며, 이 경우 환불되지 않습니다."
+        "우천, 안전 점검, 천재지변 등으로 일부 운영이 중단될 수 있으나, 환불 불가합니다."
       ]
     }
   };
@@ -1082,7 +1082,7 @@ input:focus, textarea:focus, select:focus {
   els.btnReset.addEventListener("click", function(){
     var ok = window.confirm(
       "지금 보고 있는 " + MODE_LABELS[mode] + " 입장권의 모든 값을 기본값으로 되돌릴까요?\n" +
-      "저장된 편집 내용도 함께 지워집니다. (다른 종류의 입장권은 그대로 유지돼요)"
+      "저장된 편집 내용도 함께 지워집니다. (다른 종류의 입장권은 그대로 유지됩니다.)"
     );
     if(!ok) return;
     data[mode] = factoryFor(mode);
