@@ -365,6 +365,17 @@ input:focus, textarea:focus, select:focus {
 .status { padding: 0 26px; display: flex; align-items: center; justify-content: center; color: #9299a3; font-size: 11px; }
 .hidden { display: none !important; }
 
+/* ===== 업데이트 알림 배너 ===== */
+.update-banner {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  padding: 10px 16px; background: var(--primary-light); color: #123b63;
+  font-size: 13px; text-align: center; flex-wrap: wrap;
+}
+.update-banner-close {
+  border: none; background: transparent; color: #123b63; font-size: 17px;
+  cursor: pointer; line-height: 1; padding: 0 4px;
+}
+
 /* ===== 티켓 위 직접 편집(드래그 후 타이핑) 강조 표시 ===== */
 .editable {
   outline: none;
@@ -416,6 +427,12 @@ input:focus, textarea:focus, select:focus {
 </style>
 </head>
 <body class="mode-movie">
+
+<div id="updateBanner" class="update-banner hidden">
+  <span>새 버전(<span id="updateBannerVersion"></span>)으로 업데이트됐어요. 직접 고친 내용은 그대로 두고, 안 고친 항목만 새 기본값으로 자동 반영했어요.</span>
+  <button type="button" id="updateBannerClose" class="update-banner-close" aria-label="닫기">×</button>
+</div>
+
 <div class="app">
 
   <div class="topbar">
@@ -647,7 +664,7 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <div class="status">입장권 편집기 v4.2.3 · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
+  <div class="status">입장권 편집기 v<span id="footerVersion"></span> · 입력 내용은 이 브라우저에 자동 저장되며 서버로 전송되지 않습니다</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -671,6 +688,16 @@ input:focus, textarea:focus, select:focus {
   // 이전 버전(영화 전용 v3.x.x / 테마파크 전용 v4.1.1)이 남긴 저장값 — 처음 열 때 한 번 이어받는다.
   var LEGACY_MOVIE_KEY = "boxOfficeTicketEditor:v1";
   var LEGACY_PARK_KEY = "themeParkTicketEditor:v1";
+
+  // 지금 배포된 버전. 새 버전을 낼 때마다 이 값만 올려주면,
+  // 기존에 쓰던 사람(=저장된 편집 내용이 있는 사람)이 다시 열었을 때
+  // 영화/테마파크 두 종류 모두, 사용자가 직접 고친 적 없는 항목만 새 기본값으로 자동 반영되고
+  // (이미 고친 항목은 그대로 유지), 위쪽에 안내 배너가 잠깐 떴다 사라진다.
+  // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
+  // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
+  //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
+  var APP_VERSION = "4.4.0";
+  var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크" };
 
@@ -783,6 +810,29 @@ input:focus, textarea:focus, select:focus {
   var mode = "movie";                 // 지금 보고 있는 입장권 종류: "movie" | "park"
   var data = { movie: null, park: null }; // 종류별로 저장되는 입력값 (init에서 채운다)
   var runtime = { movie: newRuntime(), park: newRuntime() }; // 종류별 티켓 위 직접 편집값(저장되지 않음)
+
+  // 사용자가 실제로 손댄 필드만 기록해 둔다 (종류별로 따로). data와 함께 저장/복원된다.
+  // 새 버전이 나왔을 때, 여기 표시가 안 된(=한 번도 안 고친) 필드만 새 기본값으로 자동 반영하고
+  // 표시가 된(=이미 고친) 필드는 그대로 둔다.
+  var TRACKED_TEXT_KEYS = [
+    "heading", "issueLabel", "format", "rating", "title", "original",
+    "screen", "session", "adult", "child", "senior", "people"
+  ];
+  function emptyTouched(){
+    return {
+      heading: false, issueLabel: false, format: false, rating: false,
+      title: false, original: false, screen: false, session: false,
+      adult: false, child: false, senior: false, people: false,
+      seats: false, assets: false, notes: false, colors: false
+    };
+  }
+  function normalizeTouched(t){
+    var base = emptyTouched();
+    var s = t && typeof t === "object" ? t : {};
+    Object.keys(base).forEach(function(k){ base[k] = !!s[k]; });
+    return base;
+  }
+  var touched = { movie: emptyTouched(), park: emptyTouched() };
 
   var seats = DEFAULT_SEATS.slice();
   var assets = cloneAssets(DEFAULT_ASSETS);
@@ -970,7 +1020,7 @@ input:focus, textarea:focus, select:focus {
   function persistNow(){
     saveTimer = null;
     try{
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: mode, data: data }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode: mode, data: data, touched: touched }));
     } catch(e){ /* 저장 공간이 없거나 접근이 막힌 경우 - 조용히 무시 */ }
   }
 
@@ -1016,6 +1066,10 @@ input:focus, textarea:focus, select:focus {
       mode = saved.mode === "park" ? "park" : "movie";
       data.movie = refreshTime(normalize("movie", saved.data.movie));
       data.park = refreshTime(normalize("park", saved.data.park));
+      // 예전 저장값(touched 기록이 생기기 전)은 "아무것도 안 고친 것"으로 간주한다.
+      // → 이번 한 번은 새 기본값으로 자동 반영될 수 있지만, 이후로는 정확히 추적된다.
+      touched.movie = normalizeTouched(saved.touched && saved.touched.movie);
+      touched.park = normalizeTouched(saved.touched && saved.touched.park);
       return;
     }
     // 처음 열었다면, 이전 버전에서 편집하던 내용이 있을 경우 이어받는다.
@@ -1023,6 +1077,8 @@ input:focus, textarea:focus, select:focus {
     var oldPark = readJson(LEGACY_PARK_KEY);
     data.movie = oldMovie ? refreshTime(normalize("movie", oldMovie)) : factoryFor("movie");
     data.park = oldPark ? refreshTime(normalize("park", oldPark)) : factoryFor("park");
+    touched.movie = emptyTouched();
+    touched.park = emptyTouched();
     mode = oldPark && !oldMovie ? "park" : "movie";
   }
 
@@ -1078,20 +1134,54 @@ input:focus, textarea:focus, select:focus {
     btn.addEventListener("click", function(){ switchMode(btn.getAttribute("data-mode")); });
   });
 
-  // "기본값으로 초기화"는 지금 보고 있는 종류만 되돌린다. (다른 종류의 값은 그대로 둔다)
+  // 종류(m)를 기본값으로 "완전히" 되돌린다 (고쳤다는 표시까지 전부 지운다).
+  // "기본값으로 초기화" 버튼(확인창 있음)에서만 쓰인다.
+  function resetModeToDefaultsFully(m){
+    data[m] = factoryFor(m);
+    touched[m] = emptyTouched();
+    if(m === mode){
+      overrides = newOverrides();
+      assetsOverride = null;
+      notesOverride = null;
+      fillForm(data[m]);
+      renderAllLists();
+      render();
+    } else {
+      runtime[m] = newRuntime();
+      saveState();
+    }
+  }
+
+  // 종류(m)에서 사용자가 아직 한 번도 안 고친 값만 새 기본값으로 바꾼다. 이미 고친 값은 그대로 둔다.
+  // (버전이 바뀌었을 때 자동으로 한 번 실행된다. 확인창 없음 — 사용자 값은 건드리지 않으므로.)
+  function applyUntouchedDefaults(m){
+    var fresh = factoryFor(m);
+    var t = touched[m];
+    TRACKED_TEXT_KEYS.forEach(function(key){
+      if(!t[key]) data[m][key] = fresh[key];
+    });
+    if(!t.seats) data[m].seats = fresh.seats.slice();
+    if(!t.assets) data[m].assets = cloneAssets(fresh.assets);
+    if(!t.notes) data[m].notes = fresh.notes.slice();
+    if(!t.colors) data[m].colors = fresh.colors;
+
+    if(m === mode){
+      fillForm(data[m]);
+      renderAllLists();
+      render();
+    } else {
+      saveState();
+    }
+  }
+
+  // "기본값으로 초기화" 버튼은 지금 보고 있는 종류만, 완전히 되돌린다. (다른 종류의 값은 그대로 둔다)
   els.btnReset.addEventListener("click", function(){
     var ok = window.confirm(
       "지금 보고 있는 " + MODE_LABELS[mode] + " 입장권의 모든 값을 기본값으로 되돌릴까요?\n" +
       "저장된 편집 내용도 함께 지워집니다. (다른 종류의 입장권은 그대로 유지됩니다.)"
     );
     if(!ok) return;
-    data[mode] = factoryFor(mode);
-    overrides = newOverrides();
-    assetsOverride = null;
-    notesOverride = null;
-    fillForm(data[mode]);
-    renderAllLists();
-    render();
+    resetModeToDefaultsFully(mode);
   });
 
   /* ---------- 티켓 위 텍스트 직접 편집(contenteditable) ---------- */
@@ -1116,11 +1206,11 @@ input:focus, textarea:focus, select:focus {
   makeInlineEditable(out.assetsTitle, function(){ overrides.assetsTitle = out.assetsTitle.textContent; saveState(); });
 
   // 1:1로 대응되는 값(제목/부제/발권 라벨/인원)은 override 없이 폼 입력값 자체를 갱신한다.
-  makeInlineEditable(out.heading, function(){ els.heading.value = out.heading.textContent; saveState(); });
-  makeInlineEditable(out.title, function(){ els.title.value = out.title.textContent; saveState(); });
-  makeInlineEditable(out.original, function(){ els.original.value = out.original.textContent; saveState(); });
-  makeInlineEditable(out.issueLabel, function(){ els.issueLabel.value = out.issueLabel.textContent; saveState(); });
-  makeInlineEditable(out.people, function(){ els.people.value = out.people.textContent; saveState(); });
+  makeInlineEditable(out.heading, function(){ touched[mode].heading = true; els.heading.value = out.heading.textContent; saveState(); });
+  makeInlineEditable(out.title, function(){ touched[mode].title = true; els.title.value = out.title.textContent; saveState(); });
+  makeInlineEditable(out.original, function(){ touched[mode].original = true; els.original.value = out.original.textContent; saveState(); });
+  makeInlineEditable(out.issueLabel, function(){ touched[mode].issueLabel = true; els.issueLabel.value = out.issueLabel.textContent; saveState(); });
+  makeInlineEditable(out.people, function(){ touched[mode].people = true; els.people.value = out.people.textContent; saveState(); });
 
   /* ---------- "추가·삭제 가능한 목록" 공용 렌더러 (좌석 · 유의사항) ---------- */
   function renderEditableList(items, container, onItemChange, onItemRemove){
@@ -1168,12 +1258,13 @@ input:focus, textarea:focus, select:focus {
   function renderSeatList(){
     renderEditableList(
       seats, els.seatList,
-      function(){ overrides.place = null; render(); },
-      function(){ overrides.place = null; renderSeatList(); render(); }
+      function(){ touched[mode].seats = true; overrides.place = null; render(); },
+      function(){ touched[mode].seats = true; overrides.place = null; renderSeatList(); render(); }
     );
   }
 
   els.addSeat.addEventListener("click", function(){
+    touched[mode].seats = true;
     seats.push("");
     overrides.place = null;
     renderSeatList();
@@ -1183,6 +1274,7 @@ input:focus, textarea:focus, select:focus {
 
   // 자연스러운 순서(숫자를 진짜 크기로 비교)로 정렬 + 완전히 같은 좌석 표기는 하나만 남긴다.
   els.sortSeats.addEventListener("click", function(){
+    touched[mode].seats = true;
     var deduped = [];
     seats.forEach(function(seat){
       var trimmed = seat.trim();
@@ -1201,12 +1293,13 @@ input:focus, textarea:focus, select:focus {
   function renderNoteList(){
     renderEditableList(
       notes, els.noteList,
-      function(){ notesOverride = null; render(); },
-      function(){ notesOverride = null; renderNoteList(); render(); }
+      function(){ touched[mode].notes = true; notesOverride = null; render(); },
+      function(){ touched[mode].notes = true; notesOverride = null; renderNoteList(); render(); }
     );
   }
 
   els.addNote.addEventListener("click", function(){
+    touched[mode].notes = true;
     notes.push("");
     notesOverride = null;
     renderNoteList();
@@ -1217,6 +1310,7 @@ input:focus, textarea:focus, select:focus {
   /* ---------- 이용 항목(에셋) 선택 목록 (테마파크) ---------- */
   // 항목이 바뀌면 티켓 위에서 직접 고친 항목 줄/제목은 풀고 폼 값 기준으로 다시 그린다.
   function assetsChanged(){
+    touched[mode].assets = true;
     assetsOverride = null;
     overrides.assetsTitle = null;
     render();
@@ -1340,6 +1434,7 @@ input:focus, textarea:focus, select:focus {
   /* ---------- 색상 ---------- */
   function bindColor(input, code, cssVar){
     input.addEventListener("input", function(){
+      touched[mode].colors = true;
       code.textContent = input.value;
       els.ticket.style.setProperty(cssVar, input.value);
       saveState();
@@ -1474,11 +1569,31 @@ input:focus, textarea:focus, select:focus {
   }
 
   // 폼 값이 바뀔 때마다 전체 다시 그리기 (+ render() 안에서 자동 저장까지 수행)
+  // key가 있는 필드는 사용자가 실제로 고친 것으로 표시해 둔다(touched).
+  // (발권일시·날짜·시작·종료는 어차피 열 때마다 현재 시각으로 다시 채워지므로 표시하지 않는다.)
   [
-    els.heading, els.issued, els.issueLabel, els.format, els.rating, els.title, els.original,
-    els.date, els.session, els.start, els.end, els.screen,
-    els.adult, els.child, els.senior, els.people
-  ].forEach(function(el){ el.addEventListener("input", render); });
+    { el: els.heading, key: "heading" },
+    { el: els.issued, key: null },
+    { el: els.issueLabel, key: "issueLabel" },
+    { el: els.format, key: "format" },
+    { el: els.rating, key: "rating" },
+    { el: els.title, key: "title" },
+    { el: els.original, key: "original" },
+    { el: els.date, key: null },
+    { el: els.session, key: "session" },
+    { el: els.start, key: null },
+    { el: els.end, key: null },
+    { el: els.screen, key: "screen" },
+    { el: els.adult, key: "adult" },
+    { el: els.child, key: "child" },
+    { el: els.senior, key: "senior" },
+    { el: els.people, key: "people" }
+  ].forEach(function(binding){
+    binding.el.addEventListener("input", function(){
+      if(binding.key) touched[mode][binding.key] = true;
+      render();
+    });
+  });
 
   /* ---------- 내보내기 (인쇄 / PNG 저장) ---------- */
   els.btnPrint.addEventListener("click", function(){ window.print(); });
@@ -1507,12 +1622,41 @@ input:focus, textarea:focus, select:focus {
       });
   });
 
+  /* ---------- 업데이트 알림 배너 ---------- */
+  // 기존에 편집하던 내용(저장값)이 있던 사람이 새 버전을 다시 열었을 때,
+  // 물어보지 않고 두 종류(영화/테마파크) 모두 새 기본값으로 자동 초기화한 뒤 짧게 안내만 띄운다.
+  // (처음 여는 사람에게는 "업데이트"라는 게 의미가 없으므로 아무 것도 하지 않는다.)
+  var UPDATE_BANNER_AUTO_HIDE_MS = 6000;
+
+  function checkForUpdate(){
+    var hadSavedData = !!(readJson(STORAGE_KEY) || readJson(LEGACY_MOVIE_KEY) || readJson(LEGACY_PARK_KEY));
+    var seenVersion = null;
+    try{ seenVersion = localStorage.getItem(VERSION_SEEN_KEY); } catch(e){}
+
+    if(hadSavedData && seenVersion !== APP_VERSION){
+      applyUntouchedDefaults("movie");
+      applyUntouchedDefaults("park");
+      var banner = document.getElementById("updateBanner");
+      banner.classList.remove("hidden");
+      setTimeout(function(){ banner.classList.add("hidden"); }, UPDATE_BANNER_AUTO_HIDE_MS);
+    }
+    try{ localStorage.setItem(VERSION_SEEN_KEY, APP_VERSION); } catch(e){}
+  }
+
+  document.getElementById("updateBannerVersion").textContent = APP_VERSION;
+  document.getElementById("footerVersion").textContent = APP_VERSION;
+
+  document.getElementById("updateBannerClose").addEventListener("click", function(){
+    document.getElementById("updateBanner").classList.add("hidden");
+  });
+
   /* ---------- 시작: 저장된 값이 있으면 불러오고, 없으면 현재 시각 기준 기본값 사용 ---------- */
   loadAll();
   fillForm(data[mode]);
   applyModeUI();
   renderAllLists();
   render();
+  checkForUpdate();
 
 })();
 </script>
