@@ -25,7 +25,7 @@
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "4.6.1";
+  var APP_VERSION = "3.6.1";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
