@@ -390,7 +390,9 @@ input:focus, textarea:focus, select:focus {
 }
 
 .status { padding: 0 26px; display: flex; align-items: center; justify-content: center; color: #9299a3; font-size: 11px; }
-/* Galmuri14 폰트에서 소문자 v 글리프가 숫자보다 살짝 높게 그려져서 버전 번호 앞의 v를 아래로 내려 맞춘다 */
+/* Galmuri14 폰트에서 v3.8.5 같은 영문/숫자 조합이 한글보다 전반적으로 위에 그려져서,
+   덩어리(version-tag) 전체를 한 번 내리고, 그 안에서 v가 숫자보다 더 높게 보이는 것도 추가로 내려 맞춘다 */
+.version-tag { position: relative; top: 2px; }
 .v-mark { position: relative; top: 2px; }
 .hidden { display: none !important; }
 
