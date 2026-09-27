@@ -792,7 +792,7 @@ input:focus, textarea:focus, select:focus {
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "3.6.1";
+  var APP_VERSION = "3.6.2";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
@@ -823,7 +823,7 @@ input:focus, textarea:focus, select:focus {
     { name: "삼각김밥(참치마요)", qty: "2", price: "1700" },
     { name: "컵라면", qty: "1", price: "1500" },
     { name: "생수 500ml", qty: "1", price: "900" },
-    { name: "초코우유", qty: "1", price: "1400" }
+    { name: "바나나우유", qty: "1", price: "1400" }
   ];
 
   // 종류별로 다른 기본 문구. (발권일시·날짜 등 "지금" 기준 값은 factoryFor에서 채운다)
@@ -855,12 +855,12 @@ input:focus, textarea:focus, select:focus {
       notes: [
         "티켓 분실 시 재발급 및 재입장 불가",
         "일부 어트랙션은 키·연령·건강 상태에 따라 이용이 제한될 수 있습니다.",
-        "우천, 안전 점검, 천재지변 등으로 일부 운영이 중단될 수 있으나, 환불 불가합니다."
+        "우천, 안전 점검, 천재지변 등의 이유로 일부 운영이 중단될 수 있으나, 환불 불가합니다."
       ]
     },
     receipt: {
       heading: "록키마트 세광점",
-      issueLabel: "R-0142",
+      issueLabel: "S-130666",
       storeInfo: "세광 괴담구 어둠로 444 · 44-4444-4444",
       paymentMethod: "신용카드",
       notes: [
