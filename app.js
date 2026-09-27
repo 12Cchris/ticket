@@ -25,7 +25,7 @@
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "3.7.0";
+  var APP_VERSION = "3.8.1";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
@@ -34,6 +34,7 @@
 
   // 이용 항목의 분류 (티켓에는 이 순서대로 묶여서 표시된다)
   var ASSET_CATS = ["어트랙션", "공연·체험", "부가옵션"];
+
 
   var DEFAULT_SEATS = ["H열 12번", "H열 13번"];
 
@@ -146,6 +147,7 @@
     btnExport: document.getElementById("btnExport"),
     btnImport: document.getElementById("btnImport"),
     fileImport: document.getElementById("fileImport"),
+    btnUndo: document.getElementById("btnUndo"),
     btnReset: document.getElementById("btnReset")
   };
 
@@ -552,15 +554,55 @@
     applyModeUI();
     renderAllLists();
     render();
+    updateUndoButton();
   }
 
   Array.prototype.forEach.call(document.querySelectorAll(".mode-btn"), function(btn){
     btn.addEventListener("click", function(){ switchMode(btn.getAttribute("data-mode")); });
   });
 
+  /* ---------- 되돌리기(undo) ----------
+   * 목록에서 항목을 지우거나, 전체 선택/해제, 좌석 정렬, "기본값으로 초기화" 버튼처럼
+   * 되돌리기 까다로운(=여러 필드가 한 번에 바뀌는) 동작을 하기 직전 상태를 종류별로 잠깐 기억해 둔다.
+   * 한 글자씩 치는 텍스트 입력 자체는 브라우저 기본 되돌리기(Ctrl+Z)가 각 입력칸 안에서
+   * 이미 처리해 주므로 여기서는 다루지 않는다. (새로고침하면 이 되돌리기 기록은 사라진다 — 저장되지 않음.)
+   */
+  var undoStack = { movie: [], park: [], receipt: [] };
+  var UNDO_LIMIT = 30;
+
+  function updateUndoButton(){
+    els.btnUndo.disabled = !(undoStack[mode] && undoStack[mode].length);
+  }
+
+  // 파괴적인 동작(삭제/정렬/초기화 등) 직전에 호출해 지금 종류의 현재 상태를 스택에 쌓는다.
+  function pushUndo(){
+    var stack = undoStack[mode];
+    stack.push(JSON.stringify(collectForm()));
+    if(stack.length > UNDO_LIMIT) stack.shift();
+    updateUndoButton();
+  }
+
+  function undo(){
+    var stack = undoStack[mode];
+    if(!stack.length) return;
+    var snapshot = JSON.parse(stack.pop());
+    data[mode] = normalize(mode, snapshot);
+    overrides = newOverrides();
+    assetsOverride = null;
+    notesOverride = null;
+    fillForm(data[mode]);
+    renderAllLists();
+    render();
+    saveState();
+    updateUndoButton();
+  }
+
+  els.btnUndo.addEventListener("click", undo);
+
   // 종류(m)를 기본값으로 "완전히" 되돌린다 (고쳤다는 표시까지 전부 지운다).
   // "기본값으로 초기화" 버튼(확인창 있음)에서만 쓰인다.
   function resetModeToDefaultsFully(m){
+    if(m === mode) pushUndo(); // 초기화도 실수일 수 있으니 되돌리기 대상에 포함
     data[m] = factoryFor(m);
     touched[m] = emptyTouched();
     if(m === mode){
@@ -639,7 +681,9 @@
         window.alert("이 파일은 올바른 백업 파일(JSON)이 아니에요.");
         return;
       }
-      if(!parsed || typeof parsed !== "object" || !parsed.data || typeof parsed.data !== "object"){
+      // app 표식까지 확인해서, data라는 필드만 우연히 겹치는 다른 앱의 JSON을 잘못 불러오지 않게 한다.
+      if(!parsed || typeof parsed !== "object" || parsed.app !== "ticket-editor-backup"
+         || !parsed.data || typeof parsed.data !== "object"){
         window.alert("이 파일은 입장권 편집기 백업 파일이 아니에요.");
         return;
       }
@@ -759,6 +803,7 @@
       del.textContent = "×";
       del.addEventListener("click", function(){
         if(items.length <= 1) return; // 최소 1개는 남긴다
+        pushUndo();
         items.splice(idx, 1);
         onItemRemove();
       });
@@ -795,6 +840,7 @@
 
   // 자연스러운 순서(숫자를 진짜 크기로 비교)로 정렬 + 완전히 같은 좌석 표기는 하나만 남긴다.
   els.sortSeats.addEventListener("click", function(){
+    pushUndo();
     touched[mode].seats = true;
     var deduped = [];
     seats.forEach(function(seat){
@@ -881,6 +927,7 @@
       del.title = "삭제";
       del.textContent = "×";
       del.addEventListener("click", function(){
+        pushUndo();
         assets.splice(idx, 1);
         renderAssetList();
         assetsChanged();
@@ -895,12 +942,14 @@
   }
 
   els.selectAllAssets.addEventListener("click", function(){
+    pushUndo();
     assets.forEach(function(a){ a.on = true; });
     renderAssetList();
     assetsChanged();
   });
 
   els.clearAllAssets.addEventListener("click", function(){
+    pushUndo();
     assets.forEach(function(a){ a.on = false; });
     renderAssetList();
     assetsChanged();
@@ -979,6 +1028,7 @@
       del.textContent = "×";
       del.addEventListener("click", function(){
         if(items.length <= 1) return; // 최소 1개는 남긴다
+        pushUndo();
         items.splice(idx, 1);
         renderItemList();
         itemsChanged();
@@ -1353,6 +1403,7 @@
   applyModeUI();
   renderAllLists();
   render();
+  updateUndoButton();
   checkForUpdate();
 
 })();
