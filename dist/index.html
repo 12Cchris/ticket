@@ -66,7 +66,7 @@ button { cursor: pointer; }
 .app {
   min-height: 100vh;
   display: grid;
-  grid-template-rows: 78px 1fr 42px;
+  grid-template-rows: auto 1fr 42px;
 }
 
 /* ===== 상단바 ===== */
@@ -146,12 +146,12 @@ button { cursor: pointer; }
 .mode-btn:hover { background: #f1f6fd; }
 .mode-btn.active, .mode-btn.active:hover { background: var(--primary); color: #fff; }
 
-.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
 .action-btn {
-  min-width: 132px;
+  min-width: 104px;
   height: 42px;
-  padding: 0 18px;
+  padding: 0 14px;
   border: 1px solid #6e9bd8;
   border-radius: 6px;
   color: var(--primary);
