@@ -3,7 +3,7 @@ chcp 65001 >nul
 cd /d "%~dp0"
 
 echo [1/3] 단일 통합 index.html 빌드 중...
-node -e "const fs=require('fs');if(fs.existsSync('dist')){fs.rmSync('dist',{recursive:true,force:true});}fs.mkdirSync('dist',{recursive:true});let h=fs.readFileSync('index.html','utf8');h=h.replace('<link rel=\"stylesheet\" href=\"styles.css\">','<style>\n'+fs.readFileSync('styles.css','utf8')+'\n</style>');h=h.replace('<script src=\"app.js\"></script>','<script>\n'+fs.readFileSync('app.js','utf8')+'\n</script>');fs.writeFileSync('dist/index.html',h,'utf8');"
+node build.js
 
 if not exist "dist\index.html" (
     echo [오류] dist\index.html 빌드에 실패했습니다.
