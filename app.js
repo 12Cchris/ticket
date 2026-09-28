@@ -25,7 +25,7 @@
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "3.8.7";
+  var APP_VERSION = "3.8.8";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
@@ -577,7 +577,13 @@
   // 파괴적인 동작(삭제/정렬/초기화 등) 직전에 호출해 지금 종류의 현재 상태를 스택에 쌓는다.
   function pushUndo(){
     var stack = undoStack[mode];
-    stack.push(JSON.stringify(collectForm()));
+    // 폼 값뿐 아니라 티켓 위에서 직접 고친 내용(overrides)까지 함께 기억한다.
+    stack.push(JSON.stringify({
+      form: collectForm(),
+      overrides: overrides,
+      assetsOverride: assetsOverride,
+      notesOverride: notesOverride
+    }));
     if(stack.length > UNDO_LIMIT) stack.shift();
     updateUndoButton();
   }
@@ -586,10 +592,10 @@
     var stack = undoStack[mode];
     if(!stack.length) return;
     var snapshot = JSON.parse(stack.pop());
-    data[mode] = normalize(mode, snapshot);
-    overrides = newOverrides();
-    assetsOverride = null;
-    notesOverride = null;
+    data[mode] = normalize(mode, snapshot.form);
+    overrides = snapshot.overrides || newOverrides();
+    assetsOverride = snapshot.assetsOverride || null;
+    notesOverride = snapshot.notesOverride || null;
     fillForm(data[mode]);
     renderAllLists();
     render();
