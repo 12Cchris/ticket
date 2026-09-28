@@ -851,7 +851,7 @@ input:focus, textarea:focus, select:focus {
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "3.8.10";
+  var APP_VERSION = "3.8.11";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
@@ -1183,6 +1183,18 @@ input:focus, textarea:focus, select:focus {
     return res;
   }
 
+  // 불러온 데이터의 시간 관련 필드(발권일시·날짜·시작·종료)는 모드와 상관없이
+  // 항상 현재 시각으로 갱신한다.
+  function refreshTime(d){
+    var today = nowDateValue();
+    var now = nowTimeValue();
+    d.issued = today + "T" + now;
+    d.date = today;
+    d.start = now;
+    d.end = now;
+    return d;
+  }
+
   // 지금 폼에 입력된 값을 그대로 모아 담는다.
   function collectForm(){
     return {
@@ -1293,20 +1305,6 @@ input:focus, textarea:focus, select:focus {
 
   // 저장된 값을 불러와 mode / data를 채운다. 저장값이 없으면 공장 초기값을 쓴다.
   function loadAll(){
-    var today = nowDateValue();
-    var now = nowTimeValue();
-
-    // 불러온 데이터의 시간 관련 필드(발권일시·날짜·시작·종료)는 모드와 상관없이
-    // 항상 현재 시각으로 갱신한다. (테마파크의 "22:00" 등 고정 기본값은 처음 만들어질 때만 쓰이고,
-    // 그 뒤로 저장값을 다시 불러올 때는 다른 시간 필드와 똑같이 현재 시각으로 맞춘다.)
-    function refreshTime(d){
-      d.issued = today + "T" + now;
-      d.date = today;
-      d.start = now;
-      d.end = now;
-      return d;
-    }
-
     var saved = readJson(STORAGE_KEY);
     if(saved && saved.data){
       mode = saved.mode === "park" ? "park" : (saved.mode === "receipt" ? "receipt" : "movie");
@@ -1505,7 +1503,6 @@ input:focus, textarea:focus, select:focus {
     var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
     var stamp = new Date();
-    function pad(n){ return String(n).padStart(2, "0"); }
     var name = "입장권-백업-" + stamp.getFullYear() + pad(stamp.getMonth() + 1) + pad(stamp.getDate())
       + "-" + pad(stamp.getHours()) + pad(stamp.getMinutes()) + ".json";
     var a = document.createElement("a");
@@ -1537,16 +1534,6 @@ input:focus, textarea:focus, select:focus {
         "백업 파일을 불러올까요?\n지금 화면(영화/테마파크/영수증)에 입력돼 있는 모든 내용이 백업 내용으로 바뀝니다."
       );
       if(!ok) return;
-
-      var today = nowDateValue();
-      var now = nowTimeValue();
-      function refreshTime(d){
-        d.issued = today + "T" + now;
-        d.date = today;
-        d.start = now;
-        d.end = now;
-        return d;
-      }
 
       data.movie = refreshTime(normalize("movie", parsed.data.movie));
       data.park = refreshTime(normalize("park", parsed.data.park));
