@@ -25,7 +25,7 @@
   // (새로 처음 여는 사람에게는 아무 일도 일어나지 않는다.)
   // ※ 이 기능이 생기기 전에 저장된 값은 "아무것도 안 고친 것"으로 간주되어,
   //    다음 업데이트 한 번에 한해 전체가 새 기본값으로 바뀔 수 있다. 그 이후로는 정확히 추적된다.
-  var APP_VERSION = "3.8.8";
+  var APP_VERSION = "3.8.10";
   var VERSION_SEEN_KEY = "ticketEditor:seenVersion";
 
   var MODE_LABELS = { movie: "영화", park: "테마파크", receipt: "영수증" };
@@ -523,8 +523,9 @@
       btn.setAttribute("aria-pressed", active ? "true" : "false");
     });
 
-    Array.prototype.forEach.call(document.querySelectorAll("[data-ph-movie]"), function(input){
-      input.placeholder = input.getAttribute(isPark ? "data-ph-park" : "data-ph-movie");
+    Array.prototype.forEach.call(document.querySelectorAll("[data-ph-movie], [data-ph-park], [data-ph-receipt]"), function(input){
+      var ph = input.getAttribute("data-ph-" + mode) || input.getAttribute("data-ph-movie") || "";
+      if(ph) input.placeholder = ph;
     });
 
     document.title = "입장권 편집기 — " + MODE_ITEM_LABELS[mode];
@@ -604,6 +605,19 @@
   }
 
   els.btnUndo.addEventListener("click", undo);
+
+  window.addEventListener("keydown", function(e){
+    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey){
+      var active = document.activeElement;
+      var isInput = active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA" || active.isContentEditable);
+      if(!isInput){
+        if(undoStack[mode] && undoStack[mode].length){
+          e.preventDefault();
+          undo();
+        }
+      }
+    }
+  });
 
   // 종류(m)를 기본값으로 "완전히" 되돌린다 (고쳤다는 표시까지 전부 지운다).
   // "기본값으로 초기화" 버튼(확인창 있음)에서만 쓰인다.
@@ -763,7 +777,16 @@
     el.addEventListener("paste", function(e){
       e.preventDefault();
       var text = (e.clipboardData || window.clipboardData).getData("text/plain");
-      document.execCommand("insertText", false, text);
+      var sel = window.getSelection();
+      if(sel && sel.rangeCount){
+        sel.deleteFromDocument();
+        var range = sel.getRangeAt(0);
+        range.insertNode(document.createTextNode(text));
+        range.collapse(false);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+      el.dispatchEvent(new Event("input", { bubbles: true }));
     });
     el.addEventListener("input", onChange);
   }
@@ -1330,7 +1353,11 @@
       alert("이미지 저장 기능을 불러오지 못했습니다. 인쇄 기능을 이용해 주세요.");
       return;
     }
-    els.btnPng.disabled = true;
+    var actionButtons = [els.btnPng, els.btnPrint, els.btnExport, els.btnImport, els.btnUndo, els.btnReset];
+    var modeButtons = Array.prototype.slice.call(document.querySelectorAll(".mode-btn"));
+    var allButtons = actionButtons.concat(modeButtons);
+
+    allButtons.forEach(function(b){ if(b) b.disabled = true; });
     els.btnPng.textContent = "저장 중…";
 
     // Galmuri14 같은 웹폰트가 아직 다운로드 중일 때 캡처하면 기본 폰트로 찍힐 수 있어서,
@@ -1346,7 +1373,9 @@
       })
       .then(function(canvas){
         var link = document.createElement("a");
-        link.download = (els.title.value || (mode === "park" ? "theme-park-ticket" : "movie-ticket")) + ".png";
+        var defaultName = mode === "park" ? "theme-park-ticket" : (mode === "receipt" ? "grocery-receipt" : "movie-ticket");
+        var customName = mode === "receipt" ? (els.heading.value || els.title.value) : els.title.value;
+        link.download = (customName ? customName.trim() : defaultName) + ".png";
         link.href = canvas.toDataURL("image/png");
         link.click();
       })
@@ -1354,8 +1383,9 @@
         alert("이미지 저장 중 문제가 발생했습니다.");
       })
       .finally(function(){
-        els.btnPng.disabled = false;
+        allButtons.forEach(function(b){ if(b) b.disabled = false; });
         els.btnPng.textContent = "이미지로 저장";
+        updateUndoButton();
       });
   });
 
